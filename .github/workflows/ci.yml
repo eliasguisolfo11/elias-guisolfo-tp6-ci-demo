@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # CI ejecuta los controles requeridos antes de integrar cambios.
+  CI:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      # Descarga el repositorio en la raíz Git.
+      - name: Checkout del repositorio
+        uses: actions/checkout@v6.0.2
+
+      # Instala pnpm sin instalar dependencias todavía.
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v6.1.1
+        with:
+          version: 10.34.5
+          run_install: false
+
+      # Instala Node.js y configura la caché según el lockfile de la aplicación.
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.22.3
+          cache: pnpm
+          cache-dependency-path: nestjs-music/pnpm-lock.yaml
+
+      # Instala las dependencias con el lockfile sin modificarlo.
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+        working-directory: nestjs-music
+
+      # Ejecuta el linter del proyecto.
+      - name: pnpm lint
+        run: pnpm lint
+        working-directory: nestjs-music
+
+      # Compila la aplicación.
+      - name: pnpm build
+        run: pnpm build
+        working-directory: nestjs-music
+
+      # Ejecuta las pruebas unitarias.
+      - name: pnpm test
+        run: pnpm test
+        working-directory: nestjs-music
+
+      # Ejecuta las pruebas end-to-end.
+      - name: pnpm test:e2e
+        run: pnpm test:e2e
+        working-directory: nestjs-music
+
+      # Genera el reporte de cobertura aunque falle un gate anterior.
+      - name: pnpm test:cov
+        if: always()
+        run: pnpm test:cov
+        working-directory: nestjs-music
+
+      # Exige un archivo regular visible si todos los pasos anteriores terminaron bien.
+      - name: Verificar archivo de cobertura
+        if: success()
+        run: test -n "$(find nestjs-music/coverage -type f ! -path '*/.*' -print -quit)"
+
+      # Publica el reporte de cobertura aunque un paso anterior haya fallado.
+      - name: Subir reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-report
+          path: nestjs-music/coverage/
+          if-no-files-found: ignore

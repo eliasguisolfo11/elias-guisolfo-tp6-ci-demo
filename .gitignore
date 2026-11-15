@@ -1,0 +1,12 @@
+**/node_modules/
+**/dist/
+**/coverage/
+**/.temp/
+**/.tmp/
+**/.env
+**/.env.*
+!**/.env.example
+**/*.tsbuildinfo
+**/data/auth.db*
+**/data/reservations.db*
+**/data/reservations-coordination.db*
